@@ -2,8 +2,8 @@
 #![no_main]
 
 // The writeln! trait.
-use core::fmt::Write;
 use core::cell::RefCell;
+use core::fmt::Write;
 
 use cortex_m::interrupt::Mutex;
 use cortex_m_rt::entry;
@@ -16,32 +16,28 @@ use usbd_serial::SerialPort;
 use solderparty_rp2040_stamp::{
     hal::{
         self,
-        clocks::{init_clocks_and_plls, },
+        clocks::init_clocks_and_plls,
+        gpio::{bank0::Gpio3, Floating, Input, Interrupt, Pin},
         pac,
         timer::Timer,
         watchdog::Watchdog,
         Sio,
-        gpio::{Input, Pin, Floating, Interrupt, bank0::Gpio3},
     },
-    pac::{interrupt},
+    pac::interrupt,
     Pins, XOSC_CRYSTAL_FREQ,
 };
 
 use infrared::{
-    Receiver,
-    protocol::{NecApple},
+    protocol::NecApple,
     receiver::{Event, PinInput},
+    Receiver,
 };
 
 type IrPin = Pin<Gpio3, Input<Floating>>;
 type IrProto = NecApple;
 type IrCommand = <IrProto as infrared::Protocol>::Cmd;
 
-type IrReceiver = Receiver<
-    IrProto,
-    Event,
-    PinInput<IrPin>,
->;
+type IrReceiver = Receiver<IrProto, Event, PinInput<IrPin>>;
 
 pub static IR_RECEIVER: Mutex<RefCell<Option<IrReceiver>>> = Mutex::new(RefCell::new(None));
 pub static TIMER: Mutex<RefCell<Option<hal::Timer>>> = Mutex::new(RefCell::new(None));
@@ -60,7 +56,9 @@ fn main() -> ! {
         pac.PLL_USB,
         &mut pac.RESETS,
         &mut watchdog,
-    ).ok().unwrap();
+    )
+    .ok()
+    .unwrap();
 
     // Set up the USB driver
     let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
@@ -116,10 +114,7 @@ fn main() -> ! {
     }
 
     loop {
-
-        let cmd = cortex_m::interrupt::free(|cs| {
-            CMD.borrow(cs).take()
-        });
+        let cmd = cortex_m::interrupt::free(|cs| CMD.borrow(cs).take());
 
         if let Some(cmd) = cmd {
             let mut s = heapless::String::<128>::new();
